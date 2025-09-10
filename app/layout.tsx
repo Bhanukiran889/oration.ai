@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import Navbar from "@/components/Navbar";
+import { TRPCProvider } from "@/lib/trpc/provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,8 +29,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ClerkProvider>
-          <Navbar />
-          {children}</ClerkProvider>
+          <TRPCProvider>
+            <Navbar />
+            {children}
+          </TRPCProvider>
+        </ClerkProvider>
       </body>
     </html>
   );
