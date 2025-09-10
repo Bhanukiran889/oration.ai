@@ -15,15 +15,15 @@ datasource db {
 }
 
 model User {
-  id        Int          @id @default(autoincrement())
-  authId    String       @unique // Auth0 or social login ID
-  email     String?      @unique
+  id        Int       @id @default(autoincrement())
+  authId    String    @unique // Clerk user ID
+  email     String?   @unique
   name      String?
-  sessions  ChatSession[]
-  createdAt DateTime     @default(now())
+  sessions  Session[]
+  createdAt DateTime  @default(now())
 }
 
-model ChatSession {
+model Session {
   id        Int       @id @default(autoincrement())
   user      User      @relation(fields: [userId], references: [id])
   userId    Int
@@ -31,13 +31,17 @@ model ChatSession {
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([userId, updatedAt])
 }
 
 model Message {
-  id        Int         @id @default(autoincrement())
-  session   ChatSession @relation(fields: [sessionId], references: [id])
+  id        Int      @id @default(autoincrement())
+  session   Session  @relation(fields: [sessionId], references: [id])
   sessionId Int
-  role      String      // "user" | "assistant"
+  role      String   // "user" | "assistant"
   content   String
-  createdAt DateTime    @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([sessionId, createdAt])
 }
