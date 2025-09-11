@@ -1,8 +1,10 @@
 import { router } from '@/server/trpc';
-import { chatRouter } from '@/server/routers/chat';
+import { sessionRouter } from '@/server/routers/session';
+import { messageRouter } from '@/server/routers/message';
 
 export const appRouter = router({
-  chat: chatRouter,
+  session: sessionRouter,
+  message: messageRouter,
 });
 
 export type AppRouter = typeof appRouter;
