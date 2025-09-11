@@ -149,7 +149,7 @@ function MessageBubble({ message }: { message: MessageItem }) {
         }}
       >
         <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>{isUser ? 'You' : 'Assistant'}</div>
-        <div>{message.content}</div>
+        <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{message.content}</div>
       </div>
     </div>
   );
