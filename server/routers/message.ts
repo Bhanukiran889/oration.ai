@@ -1,6 +1,7 @@
 import { authedProcedure, router } from '@/server/trpc';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { getCareerReply } from '@/lib/llm';
 
 
 export const messageRouter = router({
@@ -35,7 +36,17 @@ export const messageRouter = router({
         },
       });
 
-      const assistantContent = 'Hello, I am your career guide.';
+      const history = await prisma.message.findMany({
+        where: { sessionId: input.sessionId },
+        orderBy: { createdAt: 'asc' },
+        select: { role: true, content: true },
+      });
+      const prompt = [
+        { role: 'system', content: 'You are a concise and helpful career counselor.' },
+        ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+        { role: 'user', content: input.content },
+      ];
+      const assistantContent = await getCareerReply(prompt as any);
 
       const assistantMsg = await prisma.message.create({
         data: {

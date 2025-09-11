@@ -27,7 +27,7 @@ export const sessionRouter = router({
   delete: authedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      await prisma.session.delete({ where: { id: input.id, userId: ctx.user!.id } as any });
+      await prisma.session.deleteMany({ where: { id: input.id, userId: ctx.user!.id } });
       return { ok: true };
     }),
 });
