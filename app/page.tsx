@@ -130,7 +130,7 @@ export default function ChatPage() {
         </div>
       </aside>
       <main className="flex min-h-0 flex-col">
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 pb-32">
           {!activeSessionId && <p className="text-sm text-muted-foreground">Select or create a chat.</p>}
           {activeSessionId && messagesLoading && <p className="text-sm text-muted-foreground">Loading messages…</p>}
           {activeSessionId && messagesError && (
@@ -168,9 +168,9 @@ function Composer({ onSend }: { sessionId: number; onSend: (text: string) => voi
         onSend(text);
         setText('');
       }}
-      className="border-t p-3"
+      className="sticky bottom-3 z-10 mx-auto w-full max-w-3xl p-0"
     >
-      <div className="relative mx-auto flex max-w-3xl items-center justify-center">
+      <div className="relative mx-auto flex max-w-3xl items-center justify-center px-4">
         <div className="flex w-full items-center gap-2 rounded-full border bg-background/80 px-3 py-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <input
             value={text}
