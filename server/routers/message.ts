@@ -41,10 +41,14 @@ export const messageRouter = router({
         orderBy: { createdAt: 'asc' },
         select: { role: true, content: true },
       });
+      // Build messages from system + full history (history already includes the latest user message saved above).
       const prompt = [
-        { role: 'system', content: 'You are a concise and helpful career counselor.' },
+        {
+          role: 'system',
+          content:
+            'You are a concise, friendly career counselor. Maintain context within this chat session (e.g., remember the user\'s name and prior answers). Prefer short paragraphs and actionable advice.',
+        },
         ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-        { role: 'user', content: input.content },
       ];
       const assistantContent = await getCareerReply(prompt as any);
 
