@@ -24,6 +24,16 @@ export const sessionRouter = router({
       return session;
     }),
 
+  updateTitle: authedProcedure
+    .input(z.object({ id: z.number(), title: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const updated = await prisma.session.update({
+        where: { id: input.id, userId: ctx.user!.id } as any,
+        data: { title: input.title },
+      });
+      return updated;
+    }),
+
   delete: authedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {

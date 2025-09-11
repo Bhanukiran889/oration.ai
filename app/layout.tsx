@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import Navbar from "@/components/Navbar";
 import { TRPCProvider } from "@/lib/trpc/provider";
+import { ThemeProvider } from "@/lib/theme/ThemeProvider";
+import { ToastProvider } from "@/lib/toast/ToastProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,10 +30,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <ClerkProvider>
-          <TRPCProvider>
-            <Navbar />
-            {children}
-          </TRPCProvider>
+          <ThemeProvider>
+            <ToastProvider>
+              <TRPCProvider>
+                {children}
+              </TRPCProvider>
+            </ToastProvider>
+          </ThemeProvider>
         </ClerkProvider>
       </body>
     </html>

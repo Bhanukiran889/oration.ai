@@ -4,7 +4,8 @@ import { trpc } from '@/lib/trpc/client';
 import { useMemo, useState } from 'react';
 import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@/server/routers/_app';
-import { SignedIn, SignedOut, SignInButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
+import { useToast } from '@/lib/toast/ToastProvider';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
@@ -15,6 +16,7 @@ type MessageItem = RouterOutputs['message']['list'][number];
 
 export default function ChatPage() {
   const utils = trpc.useUtils();
+  const { push } = useToast();
   const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = trpc.session.list.useQuery({});
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const messageInput = useMemo(() => (activeSessionId === null ? { sessionId: 0 } : { sessionId: activeSessionId }), [activeSessionId]);
@@ -24,56 +26,81 @@ export default function ChatPage() {
       await utils.session.list.invalidate();
       setActiveSessionId(s.id);
     },
+    onError: (e) => push(e.message || 'Failed to create session'),
   });
   const deleteSession = trpc.session.delete.useMutation({
     onSuccess: async () => {
       await utils.session.list.invalidate();
       setActiveSessionId(null);
     },
+    onError: (e) => push(e.message || 'Failed to delete session'),
   });
+  const updateTitle = trpc.session.updateTitle.useMutation({
+    onError: (e) => push(e.message || 'Failed to rename session'),
+  });
+  const [isTyping, setIsTyping] = useState(false);
   const sendMessage = trpc.message.sendMessage.useMutation({
-    onSuccess: async () => {
-      await utils.message.list.invalidate(messageInput);
+    onMutate: async (vars) => {
+      setIsTyping(true);
+      const isFirst = !messages || messages.length === 0;
+      return { isFirst, content: vars.content };
     },
+    onSuccess: async (_data, _vars, ctx) => {
+      await utils.message.list.invalidate(messageInput);
+      if (ctx?.isFirst && activeSessionId) {
+        const title = (ctx.content || '').slice(0, 60);
+        updateTitle.mutate({ id: activeSessionId, title });
+        await utils.session.list.invalidate();
+      }
+    },
+    onError: (e) => push(e.message || 'Failed to send message'),
+    onSettled: () => setIsTyping(false),
   });
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', height: 'calc(100vh - 60px)' }}>
+    <div className="grid h-dvh grid-cols-[280px_1fr] overflow-hidden">
       <SignedOut>
-        <div style={{ gridColumn: '1 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
-          <div>
-            <p>Please sign in to view your chats.</p>
-            <SignInButton mode="modal">
-              <button>Sign in</button>
-            </SignInButton>
+        <div className="col-span-2 flex items-center justify-center p-10">
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-muted-foreground">Please sign in to view your chats.</p>
+            <div className="flex items-center justify-center gap-2">
+              <SignInButton mode="modal">
+                <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground">Sign in</button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="rounded-md border px-4 py-2">Sign up</button>
+              </SignUpButton>
+            </div>
           </div>
         </div>
       </SignedOut>
       <SignedIn>
-      <aside style={{ borderRight: '1px solid #eee', padding: 12, overflowY: 'auto' }}>
-        <button onClick={() => createSession.mutate({})} disabled={createSession.isPending}>+ New Chat</button>
-        {sessionsLoading && <p style={{ marginTop: 12 }}>Loading sessions…</p>}
+      <aside className="flex min-h-0 flex-col overflow-y-auto border-r bg-sidebar p-3 text-sidebar-foreground">
+        <button
+          onClick={() => createSession.mutate({})}
+          disabled={createSession.isPending}
+          className="inline-flex w-full items-center justify-center rounded-md border px-3 py-2 text-sm hover:bg-accent"
+        >
+          + New Chat
+        </button>
+        {sessionsLoading && <p className="mt-3 text-sm text-muted-foreground">Loading sessions…</p>}
         {sessionsError && (
-          <p style={{ marginTop: 12, color: 'crimson' }}>
-            Failed to load sessions: {sessionsError.message}
-          </p>
+          <p className="mt-3 text-sm text-destructive">Failed to load sessions: {sessionsError.message}</p>
         )}
-        {!sessionsLoading && (!sessions || sessions.length === 0) && <p style={{ marginTop: 12 }}>No sessions yet.</p>}
-        <ul style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {!sessionsLoading && (!sessions || sessions.length === 0) && (
+          <p className="mt-3 text-sm text-muted-foreground">No sessions yet.</p>
+        )}
+        <ul className="mt-3 flex flex-col gap-1 overflow-y-auto">
           {sessions?.map((s: SessionItem) => {
             const isActive = s.id === activeSessionId;
             return (
-              <li key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <li key={s.id} className="flex items-center gap-1">
                 <button
                   onClick={() => setActiveSessionId(s.id)}
-                  style={{
-                    flex: 1,
-                    textAlign: 'left',
-                    background: isActive ? '#eef' : 'transparent',
-                    border: '1px solid #ddd',
-                    padding: '6px 8px',
-                    borderRadius: 6,
-                  }}
+                  className={
+                    'flex-1 truncate rounded-md border px-3 py-2 text-left text-sm hover:bg-accent ' +
+                    (isActive ? 'bg-accent' : '')
+                  }
                 >
                   {s.title ?? `Session ${s.id}`}
                 </button>
@@ -81,7 +108,7 @@ export default function ChatPage() {
                   onClick={() => deleteSession.mutate({ id: s.id })}
                   title="Delete"
                   disabled={deleteSession.isPending}
-                  style={{ border: '1px solid #ddd', padding: '6px 8px', borderRadius: 6 }}
+                  className="rounded-md border px-2 py-2 text-sm hover:bg-accent"
                 >
                   ×
                 </button>
@@ -89,18 +116,35 @@ export default function ChatPage() {
             );
           })}
         </ul>
+        <div className="mt-auto border-t pt-3">
+          <SignedOut>
+            <div className="flex items-center gap-2">
+              <SignInButton mode="modal">
+                <button className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent">Sign in</button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent">Sign up</button>
+              </SignUpButton>
+            </div>
+          </SignedOut>
+        </div>
       </aside>
-      <main style={{ display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1, padding: 16, overflowY: 'auto' }}>
-          {!activeSessionId && <p>Select or create a chat.</p>}
-          {activeSessionId && messagesLoading && <p>Loading messages…</p>}
+      <main className="flex min-h-0 flex-col">
+        <div className="flex-1 overflow-y-auto p-4">
+          {!activeSessionId && <p className="text-sm text-muted-foreground">Select or create a chat.</p>}
+          {activeSessionId && messagesLoading && <p className="text-sm text-muted-foreground">Loading messages…</p>}
           {activeSessionId && messagesError && (
-            <p style={{ color: 'crimson' }}>Failed to load messages: {messagesError.message}</p>
+            <p className="text-sm text-destructive">Failed to load messages: {messagesError.message}</p>
           )}
-          {activeSessionId && !messagesLoading && (!messages || messages.length === 0) && <p>No messages yet. Say hello!</p>}
-          {messages?.map((m: MessageItem) => (
-            <MessageBubble key={m.id} message={m} />
-          ))}
+          {activeSessionId && !messagesLoading && (!messages || messages.length === 0) && (
+            <p className="text-sm text-muted-foreground">No messages yet. Say hello!</p>
+          )}
+          <div className="mx-auto max-w-3xl">
+            {messages?.map((m: MessageItem) => (
+              <MessageBubble key={m.id} message={m} />
+            ))}
+          </div>
+          {isTyping && <div className="mx-auto max-w-3xl opacity-70 italic mt-2">Assistant is typing…</div>}
         </div>
         {activeSessionId && (
           <Composer
@@ -114,7 +158,7 @@ export default function ChatPage() {
   );
 }
 
-function Composer({onSend }: { sessionId: number; onSend: (text: string) => void }) {
+function Composer({ onSend }: { sessionId: number; onSend: (text: string) => void }) {
   const [text, setText] = useState('');
   return (
     <form
@@ -124,10 +168,21 @@ function Composer({onSend }: { sessionId: number; onSend: (text: string) => void
         onSend(text);
         setText('');
       }}
-      style={{ display: 'flex', gap: 8, padding: 12, borderTop: '1px solid #eee' }}
+      className="border-t p-3"
     >
-      <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type your message..." style={{ flex: 1 }} />
-      <button type="submit">Send</button>
+      <div className="relative mx-auto flex max-w-3xl items-center justify-center">
+        <div className="flex w-full items-center gap-2 rounded-full border bg-background/80 px-3 py-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Message..."
+            className="w-full rounded-full bg-transparent px-2 py-2 text-sm outline-none"
+          />
+          <button type="submit" className="rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">
+            Send
+          </button>
+        </div>
+      </div>
     </form>
   );
 }
@@ -135,31 +190,22 @@ function Composer({onSend }: { sessionId: number; onSend: (text: string) => void
 function MessageBubble({ message }: { message: MessageItem }) {
   const isUser = message.role === 'user';
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: isUser ? 'flex-end' : 'flex-start',
-        margin: '8px 0',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: '70%',
-          background: isUser ? '#daf0ff' : '#f2f2f2',
-          border: '1px solid #ddd',
-          padding: '8px 10px',
-          borderRadius: 12,
-        }}
-      >
-        <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>{isUser ? 'You' : 'Assistant'}</div>
-        {isUser ? (
-          <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{message.content}</div>
-        ) : (
-          <div style={{ overflowWrap: 'anywhere' }}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{message.content}</ReactMarkdown>
+    <div className={'flex ' + (isUser ? 'justify-end' : 'justify-start')}>
+      {isUser ? (
+        <div className="my-2 max-w-[70%] rounded-2xl border bg-primary/10 px-3 py-2">
+          <div className="mb-1 text-xs opacity-70">You</div>
+          <div className="whitespace-pre-wrap break-words">{message.content}</div>
+        </div>
+      ) : (
+        <div className="my-3 w-full max-w-3xl">
+          <div className="mb-1 text-xs opacity-70">Assistant</div>
+          <div className="prose prose-invert max-w-none break-words">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+              {message.content}
+            </ReactMarkdown>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
