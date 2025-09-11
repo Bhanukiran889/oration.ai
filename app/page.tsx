@@ -5,6 +5,9 @@ import { useMemo, useState } from 'react';
 import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@/server/routers/_app';
 import { SignedIn, SignedOut, SignInButton } from '@clerk/nextjs';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type SessionItem = RouterOutputs['session']['list'][number];
@@ -111,7 +114,7 @@ export default function ChatPage() {
   );
 }
 
-function Composer({ sessionId, onSend }: { sessionId: number; onSend: (text: string) => void }) {
+function Composer({onSend }: { sessionId: number; onSend: (text: string) => void }) {
   const [text, setText] = useState('');
   return (
     <form
@@ -149,7 +152,13 @@ function MessageBubble({ message }: { message: MessageItem }) {
         }}
       >
         <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 4 }}>{isUser ? 'You' : 'Assistant'}</div>
-        <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{message.content}</div>
+        {isUser ? (
+          <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{message.content}</div>
+        ) : (
+          <div style={{ overflowWrap: 'anywhere' }}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>{message.content}</ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   );
