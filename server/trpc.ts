@@ -1,6 +1,6 @@
-import { initTRPC } from '@trpc/server';
+import { initTRPC, TRPCError } from '@trpc/server';
 import { ZodError } from 'zod';
-import { auth, currentUser } from '@clerk/nextjs/server';
+import { getAuth } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
 
 export type Context = {
@@ -8,21 +8,16 @@ export type Context = {
 };
 
 export const createContext = async ({ req }: { req: Request }): Promise<Context> => {
-  // Get the authenticated Clerk user id (if any)
-  const { userId: clerkUserId } = auth();
+  // Get the authenticated Clerk user id (if any) from the request
+  const { userId: clerkUserId } = getAuth(req as any);
   if (!clerkUserId) {
     return { user: null };
   }
 
-  // Ensure a Prisma User exists for this Clerk user
-  const cu = await currentUser();
-  const email = cu?.primaryEmailAddress?.emailAddress ?? null;
-  const name = cu?.fullName ?? cu?.username ?? null;
-
   const user = await prisma.user.upsert({
     where: { authId: clerkUserId },
-    update: { email, name },
-    create: { authId: clerkUserId, email, name },
+    update: {},
+    create: { authId: clerkUserId },
     select: { id: true, authId: true, email: true, name: true },
   });
 
@@ -45,7 +40,7 @@ export const router = t.router;
 export const publicProcedure = t.procedure;
 export const authedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.user) {
-    throw new Error('UNAUTHORIZED');
+    throw new TRPCError({ code: 'UNAUTHORIZED' });
   }
   return next({ ctx });
 });
