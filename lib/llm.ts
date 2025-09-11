@@ -1,50 +1,59 @@
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 export async function getCareerReply(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return 'Hello, I am your career guide.';
   }
 
   try {
-    const envModel = process.env.OPENROUTER_MODEL?.trim();
-    const models = [
-      ...(envModel ? [envModel] : []),
-      'mistralai/mistral-7b-instruct:free',
-      'qwen/qwen-2.5-7b-instruct:free',
-      'google/gemma-7b-it:free',
-      'gryphe/mythomax-l2-13b:free',
-      'nousresearch/nous-hermes-2-mixtral-8x7b-sft:free',
-    ];
-    for (const model of models) {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    // Insert a system-style instruction to force Markdown output
+    const systemPrompt: ChatMessage = {
+      role: 'system',
+      content:
+        'You are a career guide assistant. Always reply in well-formatted Markdown. Use headings (##), bullet points, and **bold** keywords where useful. Keep responses structured and clear, similar to ChatGPT style.',
+    };
+
+    // Merge system + user messages
+    const allMessages = [systemPrompt, ...messages];
+
+    // Convert into Gemini's expected format
+    const contents = allMessages.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user', // Gemini uses "user" or "model"
+      parts: [{ text: m.content }],
+    }));
+
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-          'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-          'X-Title': 'Career Guide Chat',
+          'X-goog-api-key': apiKey,
         },
         body: JSON.stringify({
-          model,
-          messages,
-          temperature: 0.3,
+          contents,
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 512,
+          },
         }),
-      });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '');
-        console.error('OpenRouter error', model, res.status, errText);
-        continue;
       }
-      const data = await res.json();
-      const text: string | undefined = data?.choices?.[0]?.message?.content;
-      if (text) return text;
+    );
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      console.error('Gemini API error', res.status, errText);
+      return 'Hello, I am your career guide.';
     }
-    return 'Hello, I am your career guide.';
+
+    const data = await res.json();
+    const text: string | undefined =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    return text ?? 'Hello, I am your career guide.';
   } catch (e) {
-    console.error('OpenRouter request failed', e);
+    console.error('Gemini request failed', e);
     return 'Hello, I am your career guide.';
   }
 }
-
-
