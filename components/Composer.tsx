@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button } from "./ui/button";
 
 export function Composer({ onSend }: { sessionId: number; onSend: (text: string) => void }) {
     const [text, setText] = useState('');
@@ -20,9 +21,9 @@ export function Composer({ onSend }: { sessionId: number; onSend: (text: string)
               placeholder="Message..."
               className="w-full rounded-full bg-transparent px-2 py-2 text-sm outline-none"
             />
-            <button type="submit" className="rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">
+            <Button type="submit" className="rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">
               Send
-            </button>
+            </Button>
           </div>
         </div>
       </form>
