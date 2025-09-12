@@ -26,7 +26,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar,} from "@/components/ui/avatar";
 
 type SessionItem = {
   id: number;
