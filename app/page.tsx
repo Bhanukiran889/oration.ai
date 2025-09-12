@@ -9,6 +9,8 @@ import { useToast } from '@/lib/toast/ToastProvider';
 import { Composer } from '@/components/Composer';
 import { MessageBubble } from '@/components/MessageBubble';
 import { ThemeToggleFloating } from '@/components/ThemeToggleFloating';
+import { Button } from '@/components/ui/button';
+import { Trash } from 'lucide-react';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type SessionItem = RouterOutputs['session']['list'][number];
@@ -76,95 +78,103 @@ export default function ChatPage() {
         </div>
       </SignedOut>
       <SignedIn>
-      <aside className="flex min-h-0 flex-col overflow-y-auto border-r bg-sidebar p-3 text-sidebar-foreground">
-        <button
-          onClick={() => createSession.mutate({})}
-          disabled={createSession.isPending}
-          className="inline-flex w-full items-center justify-center rounded-md border px-3 py-2 text-sm hover:bg-accent"
-        >
-          + New Chat
-        </button>
-        {sessionsLoading && <p className="mt-3 text-sm text-muted-foreground">Loading sessions…</p>}
-        {sessionsError && (
-          <p className="mt-3 text-sm text-destructive">Failed to load sessions: {sessionsError.message}</p>
-        )}
-        {!sessionsLoading && (!sessions || sessions.length === 0) && (
-          <p className="mt-3 text-sm text-muted-foreground">No sessions yet.</p>
-        )}
-        <ul className="mt-3 flex flex-col gap-1 chat-scroll flex-1 overflow-y-auto p-4 pb-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-border/80">
-          {sessions?.map((s: SessionItem) => {
-            const isActive = s.id === activeSessionId;
-            return (
-              <li key={s.id} className="flex items-center gap-1">
-                <button
-                  onClick={() => setActiveSessionId(s.id)}
-                  className={
-                    'flex-1 truncate rounded-md border px-3 py-2 text-left text-sm hover:bg-accent ' +
-                    (isActive ? 'bg-accent' : '')
-                  }
-                >
-                  {s.title ?? `Session ${s.id}`}
-                </button>
-                <button
-                  onClick={() => deleteSession.mutate({ id: s.id })}
-                  title="Delete"
-                  disabled={deleteSession.isPending}
-                  className="rounded-md border px-2 py-2 text-sm hover:bg-accent"
-                >
-                  ×
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="mt-auto border-t pt-3">
-          <div className="flex items-center gap-3 p-2">
-            <UserButton afterSignOutUrl="/" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.fullName || user?.username || 'User'}</p>
-              <p className="text-xs text-muted-foreground truncate">{user?.primaryEmailAddress?.emailAddress}</p>
-            </div>
-          </div>
-          <SignedOut>
-            <div className="flex items-center gap-2">
-              <SignInButton mode="modal">
-                <button className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent">Sign in</button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <button className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent">Sign up</button>
-              </SignUpButton>
-            </div>
-          </SignedOut>
-        </div>
-      </aside>
+        <aside className="flex min-h-0 flex-col overflow-y-auto border-r bg-sidebar p-3 text-sidebar-foreground">
 
-{/* main container */}
 
-      <main className="flex min-h-0 flex-col">
-        <ThemeToggleFloating />
-        <div className="chat-scroll flex-1 overflow-y-auto p-4 pb-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-border/80">
-          {!activeSessionId && <p className="text-sm text-muted-foreground">Select or create a chat.</p>}
-          {activeSessionId && messagesLoading && <p className="text-sm text-muted-foreground">Loading messages…</p>}
-          {activeSessionId && messagesError && (
-            <p className="text-sm text-destructive">Failed to load messages: {messagesError.message}</p>
+          <Button
+            onClick={() => createSession.mutate({})}
+            disabled={createSession.isPending}
+            variant="outline"
+            className="w-full justify-center"
+          >
+            + New Chat
+          </Button>
+
+          {sessionsLoading && <p className="mt-3 text-sm text-muted-foreground">Loading sessions…</p>}
+          {sessionsError && (
+            <p className="mt-3 text-sm text-destructive">Failed to load sessions: {sessionsError.message}</p>
           )}
-          {activeSessionId && !messagesLoading && (!messages || messages.length === 0) && (
-            <p className="text-sm text-muted-foreground">No messages yet. Say hello!</p>
+          {!sessionsLoading && (!sessions || sessions.length === 0) && (
+            <p className="mt-3 text-sm text-muted-foreground">No sessions yet.</p>
           )}
-          <div className="mx-auto max-w-3xl">
-            {messages?.map((m: MessageItem) => (
-              <MessageBubble key={m.id} message={m} />
-            ))}
+          <ul className="mt-3 flex flex-col gap-1 chat-scroll flex-1 overflow-y-auto p-4 pb-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-border/80">
+            {sessions?.map((s: SessionItem) => {
+              const isActive = s.id === activeSessionId;
+              return (
+                <li key={s.id} className="flex items-center gap-1">
+
+                  {/* Session select button */}
+                  <Button
+                    variant={isActive ? "secondary" : "outline"}
+                    className="flex-1 truncate justify-start"
+                    onClick={() => setActiveSessionId(s.id)}
+                  >
+                    {s.title ?? `Session ${s.id}`}
+                  </Button>
+
+                  {/* Delete button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Delete"
+                    disabled={deleteSession.isPending}
+                    onClick={() => deleteSession.mutate({ id: s.id })}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </Button>
+
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-auto border-t pt-3">
+            <div className="flex items-center gap-3 p-2">
+              <UserButton afterSignOutUrl="/" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{user?.fullName || user?.username || 'User'}</p>
+                <p className="text-xs text-muted-foreground truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+              </div>
+            </div>
+            <SignedOut>
+              <div className="flex items-center gap-2">
+                <SignInButton mode="modal">
+                  <button className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent">Sign in</button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent">Sign up</button>
+                </SignUpButton>
+              </div>
+            </SignedOut>
           </div>
-          {isTyping && <div className="mx-auto max-w-3xl opacity-70 italic mt-2">Assistant is typing…</div>}
-        </div>
-        {activeSessionId && (
-          <Composer
-            sessionId={activeSessionId}
-            onSend={(text) => sendMessage.mutate({ sessionId: activeSessionId, content: text })}
-          />
-        )}
-      </main>
+        </aside>
+
+        {/* main container */}
+
+        <main className="flex min-h-0 flex-col">
+          <ThemeToggleFloating />
+          <div className="chat-scroll flex-1 overflow-y-auto p-4 pb-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-border/80">
+            {!activeSessionId && <p className="text-sm text-muted-foreground">Select or create a chat.</p>}
+            {activeSessionId && messagesLoading && <p className="text-sm text-muted-foreground">Loading messages…</p>}
+            {activeSessionId && messagesError && (
+              <p className="text-sm text-destructive">Failed to load messages: {messagesError.message}</p>
+            )}
+            {activeSessionId && !messagesLoading && (!messages || messages.length === 0) && (
+              <p className="text-sm text-muted-foreground">No messages yet. Say hello!</p>
+            )}
+            <div className="mx-auto max-w-3xl">
+              {messages?.map((m: MessageItem) => (
+                <MessageBubble key={m.id} message={m} />
+              ))}
+            </div>
+            {isTyping && <div className="mx-auto max-w-3xl opacity-70 italic mt-2">Assistant is typing…</div>}
+          </div>
+          {activeSessionId && (
+            <Composer
+              sessionId={activeSessionId}
+              onSend={(text) => sendMessage.mutate({ sessionId: activeSessionId, content: text })}
+            />
+          )}
+        </main>
       </SignedIn>
     </div>
   );
