@@ -4,22 +4,22 @@ import { trpc } from '@/lib/trpc/client';
 import { useMemo, useState } from 'react';
 import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@/server/routers/_app';
-import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
+import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
 import { useToast } from '@/lib/toast/ToastProvider';
 import { Composer } from '@/components/Composer';
 import { MessageBubble } from '@/components/MessageBubble';
 import { ThemeToggleFloating } from '@/components/ThemeToggleFloating';
 import { Button } from '@/components/ui/button';
-import { Trash } from 'lucide-react';
+// import { Trash } from 'lucide-react';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/layout/AppSidebar';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
-type SessionItem = RouterOutputs['session']['list'][number];
 type MessageItem = RouterOutputs['message']['list'][number];
 
 export default function ChatPage() {
   const utils = trpc.useUtils();
   const { push } = useToast();
-  const { user } = useUser();
   const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = trpc.session.list.useQuery({});
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const messageInput = useMemo(() => (activeSessionId === null ? { sessionId: 0 } : { sessionId: activeSessionId }), [activeSessionId]);
@@ -68,85 +68,40 @@ export default function ChatPage() {
             <p className="text-sm text-muted-foreground">Please sign in to view your chats.</p>
             <div className="flex items-center justify-center gap-2">
               <SignInButton mode="modal">
-                <button className="rounded-md bg-primary px-4 py-2 text-primary-foreground">Sign in</button>
+                <Button className="rounded-md bg-primary px-4 py-2 text-primary-foreground">Sign in</Button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="rounded-md border px-4 py-2">Sign up</button>
+                <Button className="rounded-md border px-4 py-2">Sign up</Button>
               </SignUpButton>
             </div>
           </div>
         </div>
       </SignedOut>
       <SignedIn>
-        <aside className="flex min-h-0 flex-col overflow-y-auto border-r bg-sidebar p-3 text-sidebar-foreground">
+        <SidebarProvider>
+          <div className="flex h-dvh">
+            {/* Sidebar */}
+            <AppSidebar
+              sessions={sessions || []}
+              activeSessionId={activeSessionId}
+              onSelectSession={setActiveSessionId}
+              onNewChat={() => createSession.mutate({})}
+              onDeleteSession={(id) => deleteSession.mutate({ id })}
+              isDeleting={deleteSession.isPending}
+            />
+
+            {/* Main content */}
+            <div className="flex-1 flex flex-col">
+              <header className="flex items-center justify-between border-b p-2">
+                <SidebarTrigger /> {/* button to collapse/expand */}
+                <span className="font-medium">Chat</span>
+              </header>
 
 
-          <Button
-            onClick={() => createSession.mutate({})}
-            disabled={createSession.isPending}
-            variant="outline"
-            className="w-full justify-center"
-          >
-            + New Chat
-          </Button>
-
-          {sessionsLoading && <p className="mt-3 text-sm text-muted-foreground">Loading sessions…</p>}
-          {sessionsError && (
-            <p className="mt-3 text-sm text-destructive">Failed to load sessions: {sessionsError.message}</p>
-          )}
-          {!sessionsLoading && (!sessions || sessions.length === 0) && (
-            <p className="mt-3 text-sm text-muted-foreground">No sessions yet.</p>
-          )}
-          <ul className="mt-3 flex flex-col gap-1 chat-scroll flex-1 overflow-y-auto p-4 pb-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-border/80">
-            {sessions?.map((s: SessionItem) => {
-              const isActive = s.id === activeSessionId;
-              return (
-                <li key={s.id} className="flex items-center gap-1">
-
-                  {/* Session select button */}
-                  <Button
-                    variant={isActive ? "secondary" : "outline"}
-                    className="flex-1 truncate justify-start"
-                    onClick={() => setActiveSessionId(s.id)}
-                  >
-                    {s.title ?? `Session ${s.id}`}
-                  </Button>
-
-                  {/* Delete button */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    title="Delete"
-                    disabled={deleteSession.isPending}
-                    onClick={() => deleteSession.mutate({ id: s.id })}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
-
-                </li>
-              );
-            })}
-          </ul>
-          <div className="mt-auto border-t pt-3">
-            <div className="flex items-center gap-3 p-2">
-              <UserButton afterSignOutUrl="/" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.fullName || user?.username || 'User'}</p>
-                <p className="text-xs text-muted-foreground truncate">{user?.primaryEmailAddress?.emailAddress}</p>
-              </div>
             </div>
-            <SignedOut>
-              <div className="flex items-center gap-2">
-                <SignInButton mode="modal">
-                  <button className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent">Sign in</button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="flex-1 rounded-md border px-3 py-2 text-sm hover:bg-accent">Sign up</button>
-                </SignUpButton>
-              </div>
-            </SignedOut>
           </div>
-        </aside>
+        </SidebarProvider>
+
 
         {/* main container */}
 
