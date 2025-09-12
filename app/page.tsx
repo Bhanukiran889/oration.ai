@@ -4,7 +4,7 @@ import { trpc } from '@/lib/trpc/client';
 import { useMemo, useState } from 'react';
 import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@/server/routers/_app';
-import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 import { useToast } from '@/lib/toast/ToastProvider';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -17,6 +17,7 @@ type MessageItem = RouterOutputs['message']['list'][number];
 export default function ChatPage() {
   const utils = trpc.useUtils();
   const { push } = useToast();
+  const { user } = useUser();
   const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = trpc.session.list.useQuery({});
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const messageInput = useMemo(() => (activeSessionId === null ? { sessionId: 0 } : { sessionId: activeSessionId }), [activeSessionId]);
@@ -117,6 +118,13 @@ export default function ChatPage() {
           })}
         </ul>
         <div className="mt-auto border-t pt-3">
+          <div className="flex items-center gap-3 p-2">
+            <UserButton afterSignOutUrl="/" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user?.fullName || user?.username || 'User'}</p>
+              <p className="text-xs text-muted-foreground truncate">{user?.primaryEmailAddress?.emailAddress}</p>
+            </div>
+          </div>
           <SignedOut>
             <div className="flex items-center gap-2">
               <SignInButton mode="modal">
