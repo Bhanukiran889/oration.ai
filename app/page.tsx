@@ -174,7 +174,7 @@ export default function ChatPage() {
               </header>
 
               <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative"> {/* Added relative for scroll button positioning */}
-                <ThemeToggleFloating />
+               <div className="hidden md:block"><ThemeToggleFloating /></div> 
                 <div
                   ref={scrollContainerRef} // Assign scrollContainerRef here
                   className="flex-1 chat-scroll overflow-y-auto px-4 py-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-border/80"
