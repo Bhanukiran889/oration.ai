@@ -118,3 +118,30 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom scrollbar styles */
+.chat-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-slate-700);
+  border-radius: 3px;
+}
+
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sky-900);
+}
+
+.dark .chat-scroll::-webkit-scrollbar-thumb {
+  background: var(--color-sidebar-accent);
+  offset:(0.5)
+}
+
+.dark .chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--color-sidebar-accent-foreground);
+}

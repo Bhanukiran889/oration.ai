@@ -11,7 +11,7 @@ export async function getCareerReply(messages: ChatMessage[]): Promise<string> {
     const systemPrompt: ChatMessage = {
       role: 'system',
       content:
-        'You are a career guide assistant. Always reply in well-formatted Markdown. Use headings (##), bullet points, and **bold** keywords where useful. Keep responses structured and clear, similar to ChatGPT style.',
+        'You are a career guide assistant. Always reply in well-formatted Markdown. Use headings (##), bullet points, and **bold** keywords where useful. Keep responses structured, concise,clear and keep in bullet points, similar to ChatGPT style.',
     };
 
     // Merge system + user messages

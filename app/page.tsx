@@ -6,9 +6,9 @@ import type { inferRouterOutputs } from '@trpc/server';
 import type { AppRouter } from '@/server/routers/_app';
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
 import { useToast } from '@/lib/toast/ToastProvider';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeSanitize from 'rehype-sanitize';
+import { Composer } from '@/components/Composer';
+import { MessageBubble } from '@/components/MessageBubble';
+import { ThemeToggleFloating } from '@/components/ThemeToggleFloating';
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type SessionItem = RouterOutputs['session']['list'][number];
@@ -91,7 +91,7 @@ export default function ChatPage() {
         {!sessionsLoading && (!sessions || sessions.length === 0) && (
           <p className="mt-3 text-sm text-muted-foreground">No sessions yet.</p>
         )}
-        <ul className="mt-3 flex flex-col gap-1 overflow-y-auto">
+        <ul className="mt-3 flex flex-col gap-1 chat-scroll flex-1 overflow-y-auto p-4 pb-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-border/80">
           {sessions?.map((s: SessionItem) => {
             const isActive = s.id === activeSessionId;
             return (
@@ -137,8 +137,12 @@ export default function ChatPage() {
           </SignedOut>
         </div>
       </aside>
+
+{/* main container */}
+
       <main className="flex min-h-0 flex-col">
-        <div className="flex-1 overflow-y-auto p-4 pb-32">
+        <ThemeToggleFloating />
+        <div className="chat-scroll flex-1 overflow-y-auto p-4 pb-32 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border hover:scrollbar-thumb-border/80">
           {!activeSessionId && <p className="text-sm text-muted-foreground">Select or create a chat.</p>}
           {activeSessionId && messagesLoading && <p className="text-sm text-muted-foreground">Loading messages…</p>}
           {activeSessionId && messagesError && (
@@ -166,54 +170,3 @@ export default function ChatPage() {
   );
 }
 
-function Composer({ onSend }: { sessionId: number; onSend: (text: string) => void }) {
-  const [text, setText] = useState('');
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!text.trim()) return;
-        onSend(text);
-        setText('');
-      }}
-      className="sticky bottom-3 z-10 mx-auto w-full max-w-3xl p-0"
-    >
-      <div className="relative mx-auto flex max-w-3xl items-center justify-center px-4">
-        <div className="flex w-full items-center gap-2 rounded-full border bg-background/80 px-3 py-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Message..."
-            className="w-full rounded-full bg-transparent px-2 py-2 text-sm outline-none"
-          />
-          <button type="submit" className="rounded-full bg-primary px-4 py-2 text-sm text-primary-foreground">
-            Send
-          </button>
-        </div>
-      </div>
-    </form>
-  );
-}
-
-function MessageBubble({ message }: { message: MessageItem }) {
-  const isUser = message.role === 'user';
-  return (
-    <div className={'flex ' + (isUser ? 'justify-end' : 'justify-start')}>
-      {isUser ? (
-        <div className="my-2 max-w-[70%] rounded-2xl border bg-primary/10 px-3 py-2">
-          <div className="mb-1 text-xs opacity-70">You</div>
-          <div className="whitespace-pre-wrap break-words">{message.content}</div>
-        </div>
-      ) : (
-        <div className="my-3 w-full max-w-3xl">
-          <div className="mb-1 text-xs opacity-70">Assistant</div>
-          <div className="prose prose-invert max-w-none break-words">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
-              {message.content}
-            </ReactMarkdown>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
