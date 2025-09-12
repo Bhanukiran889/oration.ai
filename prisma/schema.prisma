@@ -28,7 +28,7 @@ model Session {
   user      User      @relation(fields: [userId], references: [id])
   userId    Int
   title     String?
-  messages  Message[]
+  messages  Message[]  
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -37,7 +37,7 @@ model Session {
 
 model Message {
   id        Int      @id @default(autoincrement())
-  session   Session  @relation(fields: [sessionId], references: [id])
+  session   Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade) 
   sessionId Int
   role      String   // "user" | "assistant"
   content   String
