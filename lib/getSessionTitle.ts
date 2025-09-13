@@ -17,7 +17,7 @@ Rules:
     };
     const allMessages = [systemPrompt, ...messages];
 
-    const apiKey = "AIzaSyAeiCeBW5PiIqO2Qd_DP1Pi2pWpBOmsy7s";
+    const apiKey = process.env.AI_TITLE_AI_KEY;
     if (!apiKey) return "New Conversation";
 
     const contents = allMessages.map((m) => ({
