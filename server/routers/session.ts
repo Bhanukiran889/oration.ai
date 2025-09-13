@@ -1,7 +1,7 @@
 import { authedProcedure, router } from '@/server/trpc';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-
+import { getSessionTitle } from '@/lib/getSessionTitle';
 
 export const sessionRouter = router({
   list: authedProcedure.query(async ({ ctx }) => {
@@ -40,6 +40,17 @@ export const sessionRouter = router({
       await prisma.session.deleteMany({ where: { id: input.id, userId: ctx.user!.id } });
       return { ok: true };
     }),
+
+  // Summarize session title with AI
+  summarizeTitle: authedProcedure
+    .input(z.object({
+      messages: z.array(z.object({
+        role: z.enum(['system', 'user', 'assistant']),
+        content: z.string(),
+      })),
+    }))
+    .mutation(async ({ input }) => {
+      const title = await getSessionTitle(input.messages);
+      return { title };
+    }),
 });
-
-

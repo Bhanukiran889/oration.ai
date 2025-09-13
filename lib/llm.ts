@@ -1,7 +1,8 @@
 type ChatMessage = { role: 'system' | 'user' | 'assistant'; content: string };
 
 export async function getCareerReply(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_CHAT_API_KEY;
+  console.log(apiKey)
   if (!apiKey) {
     return 'Hello, I am your career guide.';
   }

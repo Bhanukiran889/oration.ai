@@ -26,7 +26,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
-import { Avatar,} from "@/components/ui/avatar";
+import { Avatar, } from "@/components/ui/avatar";
 
 type SessionItem = {
   id: number;
@@ -76,9 +76,10 @@ export function AppSidebar({
                       onClick={() => onSelectSession(s.id)}
                       className="justify-between"
                     >
-                      <span className="truncate">
+                      <span className="truncate max-w-[150px] block">
                         {s.title ?? `Session ${s.id}`}
                       </span>
+
 
                       {/* Delete with confirmation */}
                       <AlertDialog>
@@ -135,7 +136,7 @@ export function AppSidebar({
               {user?.primaryEmailAddress?.emailAddress}
             </p>
           </div>
-          
+
         </div>
       </SidebarFooter>
     </Sidebar>

@@ -3,13 +3,14 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getCareerReply } from '@/lib/llm';
 
-
 export const messageRouter = router({
   list: authedProcedure
     .input(z.object({ sessionId: z.number() }))
     .query(async ({ ctx, input }) => {
       // Ensure session belongs to user
-      const session = await prisma.session.findFirst({ where: { id: input.sessionId, userId: ctx.user!.id } });
+      const session = await prisma.session.findFirst({
+        where: { id: input.sessionId, userId: ctx.user!.id },
+      });
       if (!session) return [];
       return prisma.message.findMany({
         where: { sessionId: input.sessionId },
@@ -22,12 +23,16 @@ export const messageRouter = router({
       z.object({
         sessionId: z.number(),
         content: z.string().min(1),
-      }),
+      })
     )
     .mutation(async ({ ctx, input }) => {
-      // Verify ownership
-      const session = await prisma.session.findFirst({ where: { id: input.sessionId, userId: ctx.user!.id } });
+      // Verify session ownership
+      const session = await prisma.session.findFirst({
+        where: { id: input.sessionId, userId: ctx.user!.id },
+      });
       if (!session) throw new Error('NOT_FOUND');
+
+      // Save user message
       const userMsg = await prisma.message.create({
         data: {
           sessionId: input.sessionId,
@@ -36,22 +41,22 @@ export const messageRouter = router({
         },
       });
 
+      // Fetch full chat history (user + assistant messages)
       const history = await prisma.message.findMany({
         where: { sessionId: input.sessionId },
         orderBy: { createdAt: 'asc' },
         select: { role: true, content: true },
       });
-      // Build messages from system + full history (history already includes the latest user message saved above).
-      const prompt = [
-        {
-          role: 'system',
-          content:
-            'You are a concise, friendly career counselor. Maintain context within this chat session (e.g., remember the user\'s name and prior answers). Prefer short paragraphs and actionable advice.',
-        },
-        ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      ];
-      const assistantContent = await getCareerReply(prompt as any);
 
+      // Call LLM with full history (system prompt is inside getCareerReply)
+      const assistantContent = await getCareerReply(
+        history.map((m) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }))
+      );
+
+      // Save assistant response
       const assistantMsg = await prisma.message.create({
         data: {
           sessionId: input.sessionId,
@@ -60,6 +65,7 @@ export const messageRouter = router({
         },
       });
 
+      // Update session timestamp
       await prisma.session.update({
         where: { id: input.sessionId },
         data: { updatedAt: new Date() },
@@ -68,5 +74,3 @@ export const messageRouter = router({
       return { user: userMsg, assistant: assistantMsg };
     }),
 });
-
-

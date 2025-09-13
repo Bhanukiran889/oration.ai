@@ -15,6 +15,7 @@ import { HeroSection } from "@/components/layout/Hero";
 import gsap from "gsap";
 import { Button } from "@/components/ui/button";
 
+
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type MessageItem = RouterOutputs["message"]["list"][number];
 
@@ -24,6 +25,9 @@ export default function ChatPage() {
   const { push } = useToast();
   const { data: sessions } = trpc.session.list.useQuery({});
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
+   // Local messages for optimistic UI
+   const [localMessages, setLocalMessages] = useState<MessageItem[]>([]);
+   const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
 
   const messageInput = useMemo(
     () =>
@@ -49,6 +53,7 @@ export default function ChatPage() {
     onSuccess: async () => {
       await utils.session.list.invalidate();
       setActiveSessionId(null);
+      setLocalMessages([])
     },
     onError: (e) => push(e.message || "Failed to delete session"),
   });
@@ -57,29 +62,58 @@ export default function ChatPage() {
     onError: (e) => push(e.message || "Failed to rename session"),
   });
 
-  // Local messages for optimistic UI
-  const [localMessages, setLocalMessages] = useState<MessageItem[]>([]);
-  const [typingMessageId, setTypingMessageId] = useState<string | null>(null);
-
+ 
   const sendMessage = trpc.message.sendMessage.useMutation({
     onMutate: async (vars) => {
-      setTypingMessageId("pending"); // show placeholder
+      setTypingMessageId("pending");
       const isFirst = !messages || messages.length === 0;
       return { isFirst, content: vars.content };
     },
+  
     onSuccess: async (_data, _vars, ctx) => {
       await utils.message.list.invalidate(messageInput);
+  
       if (ctx?.isFirst && activeSessionId) {
-        const title = (ctx.content || "").slice(0, 60);
-        updateTitle.mutate({ id: activeSessionId, title });
-        await utils.session.list.invalidate();
+        try {
+          // 1. Fetch all messages from the new session
+          const msgs = await utils.message.list.fetch(messageInput);
+          console.log("Fetched messages:", msgs);
+  
+          // 2. Find first assistant message with **title**
+          const aiMessage = msgs.find((m) => m.role === "assistant");
+          let extractedTitle: string | null = null;
+  
+          if (aiMessage?.content) {
+            const match = aiMessage.content.match(/\*\*(.*?)\*\*/);
+            if (match) {
+              extractedTitle = match[1].trim();
+            }
+          }
+  
+          // 3. Fallback if no **title** found
+          const finalTitle = extractedTitle || "New Conversation";
+          console.log("Extracted title:", finalTitle);
+  
+          // 4. Update session title
+          updateTitle.mutate({
+            id: activeSessionId,
+            title: finalTitle,
+          });
+  
+          await utils.session.list.invalidate();
+        } catch (err) {
+          console.error("Failed to update title:", err);
+        }
       }
     },
+  
     onError: (e) => push(e.message || "Failed to send message"),
+  
     onSettled: () => {
       setTypingMessageId(null);
     },
   });
+  
 
   // When new AI message arrives, replace placeholder
   useEffect(() => {
@@ -195,9 +229,9 @@ export default function ChatPage() {
                     {activeSessionId &&
                       !messagesLoading &&
                       (!localMessages || localMessages.length === 0) && (
-                        <p className="text-center text-sm text-muted-foreground">
-                          No messages yet. Start by typing below
-                        </p>
+                        <h2 className="text-3xl md:text-4xl mt-52 text-center font-bold bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                        Hello, {user?.fullName || user?.username || "User"}
+                      </h2>
                       )}
 
                     {localMessages?.map((m: MessageItem) => (
@@ -257,7 +291,10 @@ export default function ChatPage() {
                     />
                   </div>
                 ) : !messagesLoading && localMessages?.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center p-4">
+                  <div className="flex-1 flex flex-col items-center justify-center p-4">
+                    <p className="text-sm mb-2 text-muted-foreground">
+                      Navigate your career with clarity.
+                    </p>
                     <Composer
                       sessionId={activeSessionId}
                       onSend={handleSend}
