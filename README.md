@@ -45,7 +45,6 @@ npm install
 pnpm install
 ```
 
-**Create `.env.local` in repo root (example below).**
 
 **Run database migrations (Prisma example):**
 ```sh
@@ -59,6 +58,7 @@ npm run dev
 ```
 
 ---
+**Create `.env.local` in repo root (example below).**
 
 ## .env.local — example (fill with your keys)
  Create an local .env and include all the below mentioned KEYs 
